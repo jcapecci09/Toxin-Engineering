@@ -8,7 +8,7 @@ cd Toxin-Engineering
 2. Install conda enviornment
 
 ```
-conda env create -f mol-dyn.yml
+mamba env create -f mol-dyn.yml
 ```
 
 3. 
