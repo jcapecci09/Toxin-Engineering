@@ -22,10 +22,21 @@ from rosetta.protocols.antibody import *
 from rosetta.protocols.loops import *
 from rosetta.protocols.relax import FastRelax
 
+init(options=[
+    '-use_input_sc',
+    '-input_ab_scheme', 'AHo_Scheme',
+    '-ignore_unrecognized_res',
+    '-ignore_zero_occupancy', 'false',
+    '-load_PDB_components', 'false',
+    '-relax:default_repeats', '2',
+    '-no_fconfig',
+    '-mute', 'all'  
+])
+
 def pack(pose, posi, amino, scorefxn):
 
     #Set Reference Pose
-    RMSD_calc = pyrosetta.rosetta.core.simple_metrics.metrics.RMSDMetric(relaxPose)
+    RMSD_calc = pyrosetta.rosetta.core.simple_metrics.metrics.RMSDMetric(pose)
     
     
     # Select Mutate Position
@@ -76,3 +87,54 @@ def pack(pose, posi, amino, scorefxn):
     #Perform The Move
     if not os.getenv("DEBUG"):
       packer.apply(pose)
+
+
+def relax_structure(pose_to_relax, output_name):
+
+    # Create new pose and assign pose to relax to it
+    testPose = Pose()
+    testPose.assign(pose_to_relax)
+    print(testPose)
+
+    # Set up relax parameter
+    scorefxn = get_fa_scorefxn()
+    relax = rosetta.protocols.relax.FastRelax()
+    relax.set_scorefxn(scorefxn)
+    relax.constrain_relax_to_start_coords(True)
+    print(relax)
+    relax.apply(testPose)
+
+    #rename to your desired relaxed structure name
+    testPose.dump_pdb(output_name)
+
+def perform_mutation(pdb, pos, amino):
+    relaxPose = pose_from_pdb(pdb)
+    # Clone it
+    original = relaxPose.clone()
+    scorefxn = get_score_function()
+
+
+    # #Input the residue number that you wish to mutate and the 1-letter code 
+    # #If you are substituting multiple, you can just have them listed separately as exampled below
+    pack(relaxPose, pos, amino, scorefxn)
+    # #pack(relaxPose, 81, 'D', scorefxn)
+    # print("\nNew Energy:", scorefxn(relaxPose),"\n")
+
+    original_aa = str(original.residue(pos))
+    mutated_aa = relaxPose.residue(pos)
+
+    # #SAVE THE NEW PDB FILE HERE:
+    path = f'7K18_{pos}{amino}.pdb'
+    relaxPose.dump_pdb(path)
+
+
+    # #Set relaxPose back to original 
+    # relaxPose = original.clone()
+
+    print()
+    print('-' * 50)
+    print(f'Mutated structure succesfully saved as {path}')
+    print(f'Successfully mutated {original.residue(pos).name()} at position {pos} to {relaxPose.residue(pos).name()}')
+    print(f'Orginal Energy {scorefxn(original)}; New energy: {scorefxn(relaxPose)}')
+    print('-' * 50)
+    print('\n')
