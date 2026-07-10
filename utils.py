@@ -164,8 +164,14 @@ def visualize(pdb: str, output: str):
     cmd.show('sticks', 'binding_site')
     cmd.show("cartoon")
 
-    # Center the protein
-    cmd.orient()
+    # Center the protein around interface
+    cmd.set_view((\
+     0.843022108,    0.219623774,   -0.490965903,\
+    -0.473968744,    0.734833062,   -0.485122830,\
+     0.254241019,    0.641686916,    0.723597884,\
+     0.002971664,   -0.004409352,  -47.775711060,\
+   102.082580566,  132.507263184,  167.430847168,\
+  -1443.574340820, 1536.576416016,  -19.999998093 ))
     cmd.bg_color("white")
 
     cmd.png(f'Data/{output}')
