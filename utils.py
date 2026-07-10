@@ -124,7 +124,7 @@ def perform_mutation(pdb, pos, amino):
     mutated_aa = relaxPose.residue(pos)
 
     # #SAVE THE NEW PDB FILE HERE:
-    path = f'7K18_{pos}{amino}.pdb'
+    path = f'pdb_files/7K18_{pos}{amino}.pdb'
     relaxPose.dump_pdb(path)
 
 
