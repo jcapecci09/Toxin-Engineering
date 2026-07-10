@@ -22,6 +22,11 @@ from rosetta.protocols.antibody import *
 from rosetta.protocols.loops import *
 from rosetta.protocols.relax import FastRelax
 
+# relevant for creating pymol session and images
+from pymol import cmd
+from IPython.display import Image, display
+from pymol import util
+
 init(options=[
     '-use_input_sc',
     '-input_ab_scheme', 'AHo_Scheme',
@@ -138,3 +143,31 @@ def perform_mutation(pdb, pos, amino):
     print(f'Orginal Energy {scorefxn(original)}; New energy: {scorefxn(relaxPose)}')
     print('-' * 50)
     print('\n')
+
+
+def visualize(pdb: str, output: str):
+    cmd.delete("all") # Resets cell
+
+
+    cmd.load(pdb)
+    cmd.hide("everything")
+    cmd.select('toxin', 'chain B')
+    cmd.select('NaV1.5', 'chain A')
+    cmd.select("binding_site", "chain A and resi 1610-1615")
+    cmd.select('Histidines', 'chain B and resi 15+43')
+
+    cmd.color('purple', 'toxin')
+    cmd.color('cyan', 'NaV1.5')
+    util.cbag('binding_site')
+    util.cbay('Histidines')
+    cmd.show('sticks', 'Histidines')
+    cmd.show('sticks', 'binding_site')
+    cmd.show("cartoon")
+
+    # Center the protein
+    cmd.orient()
+    cmd.bg_color("white")
+
+    cmd.png(f'Data/{output}')
+    cmd.save(f"Sessions/{output}.pse")
+    display(Image(f'Data/{output}.png'))
