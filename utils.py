@@ -26,6 +26,7 @@ from rosetta.protocols.relax import FastRelax
 from pymol import cmd
 from IPython.display import Image, display
 from pymol import util
+import tempfile
 
 init(options=[
     '-use_input_sc',
@@ -39,6 +40,18 @@ init(options=[
 ])
 
 def pack(pose, posi, amino, scorefxn):
+    """Mutate a specified residue to a target amino acid and locally repack
+    neighboring side chains using the provided Rosetta score function.
+
+    The mutation is restricted to the specified residue, while residues within
+    the local neighborhood are allowed to repack. All other residues remain
+    fixed. The input pose is modified in place.
+
+    :param pose: Pose to mutate
+    :param posi: Position on pose to mutate
+    :param amino: amino acid to be mutated in pose
+    :param scorefxn: Rosetta scoring function used during packing
+    """
 
     #Set Reference Pose
     RMSD_calc = pyrosetta.rosetta.core.simple_metrics.metrics.RMSDMetric(pose)
@@ -95,73 +108,106 @@ def pack(pose, posi, amino, scorefxn):
 
 
 def relax_structure(pose_to_relax, output_name):
+    """Relax a protein structure using Rosetta FastRelax.
 
-    # Create new pose and assign pose to relax to it
+    :param pose_to_relax: Pose to be relaxed
+    :param output_name: Path to output pdb of pose
+    """
+
+    # Create a copy so the original pose is left unchanged
     testPose = Pose()
     testPose.assign(pose_to_relax)
-    print(testPose)
 
     # Set up relax parameter
+    # Create the full-atom Rosetta score function
     scorefxn = get_fa_scorefxn()
+
+    # Initialize the FastRelax protocol
     relax = rosetta.protocols.relax.FastRelax()
+
+    # Use the full-atom score function during relaxation
     relax.set_scorefxn(scorefxn)
+
+    # Keep the relaxed structure close to the starting coordinates
     relax.constrain_relax_to_start_coords(True)
-    print(relax)
+
+    # Perform energy minimization and side-chain optimization
     relax.apply(testPose)
 
-    #rename to your desired relaxed structure name
+    # rename to your desired relaxed structure name
     testPose.dump_pdb(output_name)
 
-def perform_mutation(pdb, pos, amino):
-    relaxPose = pose_from_pdb(pdb)
+
+def perform_mutation(relaxed_pdb, pos, amino):
+    """Wrapper function to perform pack without specifying scoring function
+
+    :param relaxed_pdb: pdb to perform mutation on
+    :param pos: position to perform mutation
+    :param amino: amino acid to muatate in
+    :return: pose of muatated pdb
+    """
+
+    # Insert pose to be mutated
+    pose_to_mutate = pose_from_pdb(relaxed_pdb)
+
     # Clone it
-    original = relaxPose.clone()
+    original = pose_to_mutate.clone()
+
+    # Create the default Rosetta score function
     scorefxn = get_score_function()
 
-
-    # #Input the residue number that you wish to mutate and the 1-letter code 
-    # #If you are substituting multiple, you can just have them listed separately as exampled below
-    pack(relaxPose, pos, amino, scorefxn)
-    # #pack(relaxPose, 81, 'D', scorefxn)
-    # print("\nNew Energy:", scorefxn(relaxPose),"\n")
-
-    original_aa = str(original.residue(pos))
-    mutated_aa = relaxPose.residue(pos)
-
-    # #SAVE THE NEW PDB FILE HERE:
-    path = f'pdb_files/7K18_{pos}{amino}.pdb'
-    relaxPose.dump_pdb(path)
+    # Perform packing
+    pack(pose_to_mutate, pos, amino, scorefxn)
 
 
-    # #Set relaxPose back to original 
-    # relaxPose = original.clone()
-
+    # print useful information
     print()
     print('-' * 50)
-    print(f'Mutated structure succesfully saved as {path}')
-    print(f'Successfully mutated {original.residue(pos).name()} at position {pos} to {relaxPose.residue(pos).name()}')
-    print(f'Orginal Energy {scorefxn(original)}; New energy: {scorefxn(relaxPose)}')
+    print(f'TASK COMPLETE')
+    print(f'Successfully mutated {original.residue(pos).name()} at position {pos} to {pose_to_mutate.residue(pos).name()}')
+    print(f'Orginal Energy {scorefxn(original)}; New energy: {scorefxn(pose_to_mutate)}')
     print('-' * 50)
     print('\n')
 
+    return pose_to_mutate
+
 
 def visualize(pdb: str, output: str):
-    cmd.delete("all") # Resets cell
+    """Allows protein complex to be viewed in PyMol. Outputs both
+    a pymol session in the Sessions directory and a quick visualization. 
 
+    :param pdb: pdb to view
+    :param output: output path to place PyMol session
+    """
 
-    cmd.load(pdb)
-    cmd.hide("everything")
-    cmd.select('toxin', 'chain B')
-    cmd.select('NaV1.5', 'chain A')
-    cmd.select("binding_site", "chain A and resi 1610-1615")
-    cmd.select('Histidines', 'chain B and resi 15+43')
+    # Reset cell to ensure no other proteins are in the current session
+    cmd.delete("all")
 
+    # perform basic tasks
+    cmd.load(pdb) # load pdb file
+    cmd.hide("everything") # hide everything
+
+    # select the toxin and color it purple
+    cmd.select('toxin', 'chain B') 
     cmd.color('purple', 'toxin')
+
+    # Select the sodium channel and color it cyan
+    cmd.select('NaV1.5', 'chain A')
     cmd.color('cyan', 'NaV1.5')
+
+    # Select the binding site on the sodium channel and color it
+    cmd.select("binding_site", "chain A and resi 1610-1615")
     util.cbag('binding_site')
+
+    # Select the toxins histidines and color them
+    cmd.select('Histidines', 'chain B and resi 15+43')
     util.cbay('Histidines')
+
+    # Show sticks for the relevant amino acids
     cmd.show('sticks', 'Histidines')
     cmd.show('sticks', 'binding_site')
+
+    # Show cartoon for whole complex
     cmd.show("cartoon")
 
     # Center the protein around interface
@@ -172,8 +218,36 @@ def visualize(pdb: str, output: str):
      0.002971664,   -0.004409352,  -47.775711060,\
    102.082580566,  132.507263184,  167.430847168,\
   -1443.574340820, 1536.576416016,  -19.999998093 ))
+
+    # Set background to white
     cmd.bg_color("white")
 
+    # Save png and session
     cmd.png(f'Data/{output}')
     cmd.save(f"Sessions/{output}.pse")
+
+    # Display png for viewing in notebook
     display(Image(f'Data/{output}.png'))
+
+
+def run_analysis(relaxed_pdb, pos, amino_acid): 
+    """Wrapper to perform entire mutation analysis. Mutate a pdb file, 
+    relax it, and then visualize in PyMol
+
+    :param relaxed_pdb: pdgb file that has already been relaxed by rosetta
+    :param pos: postion to mutate
+    :param amino_acid: amino acid to muatate in
+    """
+
+    # Grab the output path
+    output_path = f'{relaxed_pdb.split('/')[1].split('.')[0]}_{pos}{amino_acid}'
+
+    # perform mutation
+    pose = perform_mutation(relaxed_pdb, pos, amino_acid)
+
+    # Relax the structure
+    relax_structure(pose, f'pdb_files/{output_path}.pdb')
+
+    # View in PyMol
+    visualize(f'pdb_files/{output_path}.pdb', f'{output_path}')
+    
