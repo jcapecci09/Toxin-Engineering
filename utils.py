@@ -100,7 +100,6 @@ def pack(pose, posi, amino, scorefxn):
     packer.task_factory(tf)
     print(tf.create_task_and_apply_taskoperations(pose))
 
-
     
     #Perform The Move
     if not os.getenv("DEBUG"):
@@ -134,8 +133,15 @@ def relax_structure(pose_to_relax, output_name):
     # Perform energy minimization and side-chain optimization
     relax.apply(testPose)
 
+    # Print energy after relaxed
+    print(f"Relaxed energy: {scorefxn(testPose)}")
+
     # rename to your desired relaxed structure name
-    testPose.dump_pdb(output_name)
+
+    if output_name is not None:
+        testPose.dump_pdb(output_name)
+    else:
+        return testPose
 
 
 def perform_mutation(relaxed_pdb, pos, amino):
