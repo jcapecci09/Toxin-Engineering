@@ -17,6 +17,13 @@ from pyrosetta.rosetta.core.pack.task.operation import (
 from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover
 from pyrosetta.rosetta.protocols.relax import FastRelax
 
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from Bio.PDB import PDBParser
+import pandas as pd
+from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
+
 init(options=[
     '-use_input_sc',
     '-input_ab_scheme', 'AHo_Scheme',
@@ -176,11 +183,11 @@ def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str) -> Pose:
 
 # endregion
 
-def relax_structure(pose_to_relax):
+def relax_structure(pose_to_relax) -> Pose:
     """Relax a protein structure using Rosetta FastRelax.
 
     :param pose_to_relax: Pose to be relaxed
-    :param output_name: Path to output pdb of pose
+    :return: relaxed pose
     """
 
     # Create a copy so the original pose is left unchanged
@@ -209,3 +216,180 @@ def relax_structure(pose_to_relax):
     # rename to your desired relaxed structure name
 
     return testPose
+
+# region EXPLORATION
+
+
+def get_residues(pdb_file: str):
+    protein_chain_A = "A"
+    protein_chain_B = "B"
+
+    # READ PDB and place it in stucture
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure("complex", pdb_file)
+
+    # set strcutre object as model
+    model = structure[0]
+
+    # set the two models chain A and chain B
+    protein_A = model[protein_chain_A]
+    protein_B = model[protein_chain_B]
+
+
+    # Keep only standard amino acids
+    protein_A_residues = [r for r in protein_A if r.id[0] == " "]
+    protein_B_residues = [r for r in protein_B if r.id[0] == " "]
+
+
+    return protein_A_residues, protein_B_residues
+
+
+def contacts(pdb_file: str, cutoff: int):
+
+    protein_A_residues, protein_B_residues = get_residues(pdb_file)
+    print(f"Protein_A residues : {len(protein_A_residues)}")
+    print(f"Protein_B residues   : {len(protein_B_residues)}")
+
+
+
+    # COMPUTE MINIMUM HEAVY-CHAIN ATOM DISTANCE BETWEEN EVERY RESIDUE PAIR
+
+
+    # initialzie matrix of zeros
+    contact_matrix = np.zeros((len(protein_A_residues),
+                             len(protein_B_residues)))
+    
+    # for position and amino acid residue in chain A
+    for i, A_res in enumerate(protein_A_residues):
+
+        # create a list of atoms that aren't hydrogens
+        A_atoms = [a for a in A_res if a.element != "H"]
+
+        # for position and amino acid residue in chain B
+        for j, B_res in enumerate(protein_B_residues):
+
+            # create a list of atoms that aren't hydrogens
+             B_atoms = [a for a in B_res if a.element != "H"]
+            
+            # initalize infinity to search for minimum position
+             min_dist = np.inf
+            
+            # for each atom on residue in chain A
+             for A_a in A_atoms:
+                 # for each atom on the residues in chain B
+                 for B_a in B_atoms:
+                     
+                     # find distance between atoms
+                     d = A_a - B_a
+
+                     # find minimm distance
+                     if d < min_dist:
+                         min_dist = d
+            
+            # add minimum distance to contact_matrix at position on chain A and 
+            # chain B
+             contact_matrix[i, j] = min_dist
+
+
+    # DISPLAY ONLY CONTACTS WITHIN CUTOFF
+    plot_matrix = contact_matrix.copy()
+    plot_matrix[plot_matrix > cutoff] = np.nan
+
+    return plot_matrix
+
+
+def contact_map(pdb_file, cutoff, output_name):
+
+
+    # find contact region and residues
+    plot_matrix = contacts(pdb_file, cutoff)
+    protein_A_residues, protein_B_residues = get_residues(pdb_file)
+
+    # set labels for each protein
+    protein_A_labels = [
+        f"{r.resname}{r.id[1]}"
+        for r in protein_A_residues
+    ]
+
+    protein_B_labels = [
+        f"{r.resname}{r.id[1]}"
+        for r in protein_B_residues
+    ]
+
+    # set size of figure
+    plt.figure(figsize=(14,14))
+
+    sns.heatmap(
+        plot_matrix,
+        cmap="rocket_r",
+        vmin=0,
+        vmax=cutoff,
+        xticklabels=protein_B_labels,
+        yticklabels=protein_A_labels,
+        linewidths=0.2,
+        linecolor="gray",
+        cbar_kws={"label":"Minimum heavy-atom distance (Å)"}
+    )
+
+    plt.xlabel("protein B Residues (Chain B)")
+    plt.ylabel("Protein A Residues (Chain A)")
+    plt.title(f"Protein–Protein Contacts (< {cutoff} Å)")
+
+    plt.tight_layout()
+    plt.savefig(output_name, dpi=300)
+    plt.show()
+
+
+def alanine_scanner(pdb_file, cutoff):
+
+    plot_matrix = contacts(pdb_file, cutoff)
+    df = pd.DataFrame(plot_matrix)
+    df_contacts = df.stack().dropna().reset_index()
+    df_contacts.columns = ['Chain A', 'Chain B', 'Distance']
+
+    list_of_contacts = [list(set(df_contacts.loc[:, 'Chain A'])), list(set(df_contacts.loc[:, 'Chain B']))]
+    print(list_of_contacts)
+    print(set(df_contacts.loc[:, 'Chain A']))
+    print(set(df_contacts.loc[:, 'Chain B']))
+    
+
+    pose = pose_from_pdb(pdb_file)
+    end = pose.conformation().chain_end(1)
+    pos_seq = pose.sequence()
+
+
+    original_dg = delta_g(pose)
+
+
+    data = {}
+    for chain_num, set_of_contacts in enumerate(list_of_contacts):
+        print(set_of_contacts)
+        for pos in set_of_contacts:
+            
+            if chain_num == 1:
+                pose_pos = end + pos + 1
+                aa_pos = end + pos
+                actual_pos = pose_pos
+            else:
+                pose_pos = pos + 1
+                aa_pos = pos
+                actual_pos = pose_pos + 1551
+            
+            print(pos_seq[aa_pos], aa_pos)
+            print(pos_seq[pose_pos], pose_pos)
+            mutant_pose = perform_mutation(pose, pose_pos, 'A')
+            data[actual_pos] = {"ddG_binding": delta_g(mutant_pose) - original_dg, 
+                         "chain_num": chain_num + 1, 'AA': pos_seq[aa_pos]}
+    
+    return pd.DataFrame(data).T
+
+def delta_g(pose):
+
+    scorefxn = get_fa_scorefxn()
+    iam = InterfaceAnalyzerMover(
+    1,          # interface jump
+    False,      # tracer output
+    scorefxn)
+    iam.apply(pose)
+    return iam.get_interface_dG()
+# end region
