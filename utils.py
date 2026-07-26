@@ -220,33 +220,36 @@ def relax_structure(pose_to_relax) -> Pose:
 # region EXPLORATION
 
 
-def get_residues(pdb_file: str):
+def get_residues(pdb_file: str, motif_range=None):
     protein_chain_A = "A"
     protein_chain_B = "B"
 
-    # READ PDB and place it in stucture
     parser = PDBParser(QUIET=True)
     structure = parser.get_structure("complex", pdb_file)
 
-    # set strcutre object as model
     model = structure[0]
 
-    # set the two models chain A and chain B
     protein_A = model[protein_chain_A]
     protein_B = model[protein_chain_B]
-
 
     # Keep only standard amino acids
     protein_A_residues = [r for r in protein_A if r.id[0] == " "]
     protein_B_residues = [r for r in protein_B if r.id[0] == " "]
 
+    # Keep only the motif if specified
+    if motif_range is not None:
+        start, end = motif_range
+        protein_A_residues = [
+            r for r in protein_A_residues
+            if start <= r.id[1] <= end
+        ]
 
     return protein_A_residues, protein_B_residues
 
 
-def contacts(pdb_file: str, cutoff: int):
+def contacts(pdb_file: str, cutoff: int, motif_range=None):
 
-    protein_A_residues, protein_B_residues = get_residues(pdb_file)
+    protein_A_residues, protein_B_residues = get_residues(pdb_file, motif_range)
     print(f"Protein_A residues : {len(protein_A_residues)}")
     print(f"Protein_B residues   : {len(protein_B_residues)}")
 
@@ -298,12 +301,12 @@ def contacts(pdb_file: str, cutoff: int):
     return plot_matrix
 
 
-def contact_map(pdb_file, cutoff, output_name):
+def contact_map(pdb_file, cutoff, output_name, motif_range=None):
 
 
     # find contact region and residues
-    plot_matrix = contacts(pdb_file, cutoff)
-    protein_A_residues, protein_B_residues = get_residues(pdb_file)
+    plot_matrix = contacts(pdb_file, cutoff, motif_range)
+    protein_A_residues, protein_B_residues = get_residues(pdb_file, motif_range)
 
     # set labels for each protein
     protein_A_labels = [
@@ -317,7 +320,7 @@ def contact_map(pdb_file, cutoff, output_name):
     ]
 
     # set size of figure
-    plt.figure(figsize=(14,14))
+    plt.figure(figsize=(14, 8))
 
     sns.heatmap(
         plot_matrix,
@@ -339,49 +342,6 @@ def contact_map(pdb_file, cutoff, output_name):
     plt.savefig(output_name, dpi=300)
     plt.show()
 
-
-def alanine_scanner(pdb_file, cutoff):
-
-    plot_matrix = contacts(pdb_file, cutoff)
-    df = pd.DataFrame(plot_matrix)
-    df_contacts = df.stack().dropna().reset_index()
-    df_contacts.columns = ['Chain A', 'Chain B', 'Distance']
-
-    list_of_contacts = [list(set(df_contacts.loc[:, 'Chain A'])), list(set(df_contacts.loc[:, 'Chain B']))]
-    print(list_of_contacts)
-    print(set(df_contacts.loc[:, 'Chain A']))
-    print(set(df_contacts.loc[:, 'Chain B']))
-    
-
-    pose = pose_from_pdb(pdb_file)
-    end = pose.conformation().chain_end(1)
-    pos_seq = pose.sequence()
-
-
-    original_dg = delta_g(pose)
-
-
-    data = {}
-    for chain_num, set_of_contacts in enumerate(list_of_contacts):
-        print(set_of_contacts)
-        for pos in set_of_contacts:
-            
-            if chain_num == 1:
-                pose_pos = end + pos + 1
-                aa_pos = end + pos
-                actual_pos = pose_pos
-            else:
-                pose_pos = pos + 1
-                aa_pos = pos
-                actual_pos = pose_pos + 1551
-            
-            print(pos_seq[aa_pos], aa_pos)
-            print(pos_seq[pose_pos], pose_pos)
-            mutant_pose = perform_mutation(pose, pose_pos, 'A')
-            data[actual_pos] = {"ddG_binding": delta_g(mutant_pose) - original_dg, 
-                         "chain_num": chain_num + 1, 'AA': pos_seq[aa_pos]}
-    
-    return pd.DataFrame(data).T
 
 def delta_g(pose):
 
