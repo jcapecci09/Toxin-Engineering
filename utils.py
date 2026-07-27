@@ -23,6 +23,7 @@ import seaborn as sns
 from Bio.PDB import PDBParser
 import pandas as pd
 from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
+from random import choice
 
 init(options=[
     '-use_input_sc',
@@ -108,7 +109,7 @@ def pack(pose, posi, amino, scorefxn):
 def perform_mutation(pose, pos, amino):
     """Wrapper function to perform pack without specifying scoring function
 
-    :param pose: pdb to perform mutation on
+    :param pose: pose to perform mutation on
     :param pos: position to perform mutation
     :param amino: amino acid to muatate in
     :return: pose of muatated pdb
@@ -181,6 +182,29 @@ def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str) -> Pose:
 
     return new_pose
 
+
+def random_mutation(pose, list_aa_pos: list):
+    """Perform a random point mutation at one of the specified residue positions.
+
+    A residue position is randomly selected from the list of allowed mutation
+    sites, and a random amino acid from the 20 standard amino acids is chosen
+    as the replacement.
+
+    :param pose: Pose to mutate.
+    :param list_aa_pos: List of residue positions that are allowed to be mutated.
+    :return: A new pose containing the randomly generated mutation.
+    """
+
+    # Create a list of all 20 possible amino acids
+    amino_acids = ["A","R","N","D","C","Q","E","G","H","I",
+                   "L","K","M","F","P","S","T","W","Y","V"]
+
+    # Randomly choose a position and an amino acid
+    aa = choice(amino_acids)
+    pos = choice(list_aa_pos)
+
+    # Perform mutation return pose
+    return perform_mutation(pose, pos, aa)
 # endregion
 
 def relax_structure(pose_to_relax) -> Pose:
