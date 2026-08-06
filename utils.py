@@ -14,7 +14,7 @@ from pyrosetta.rosetta.core.pack.task.operation import (
     RestrictToRepackingRLT,
     RestrictAbsentCanonicalAASRLT,
     OperateOnResidueSubset)
-from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover
+from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover, MinMover
 from pyrosetta.rosetta.protocols.relax import FastRelax
 
 import numpy as np
@@ -24,6 +24,8 @@ from Bio.PDB import PDBParser
 import pandas as pd
 from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
 from random import choice
+from pyrosetta.rosetta.core.kinematics import MoveMap
+from pyrosetta.rosetta.core.scoring import ScoreType
 
 init(options=[
     '-use_input_sc',
@@ -35,6 +37,7 @@ init(options=[
     '-no_fconfig',
     '-mute', 'all'  
 ])
+
 
 class InsertMutationError(Exception):
     pass
@@ -176,7 +179,7 @@ def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str) -> Pose:
     # For each position in sequence needed to be mutated
     # Replace with new aa
     for pos, aa in zip(range(start, len(mutation) + start), mutation):
-        new_pose = relax_structure(perform_mutation(new_pose, pos + 1, aa))
+        new_pose = relax_structure2(perform_mutation(new_pose, pos + 1, aa))
         print(f'{counter}/{len_mutation} mutations inserted')
         counter += 1
 
@@ -199,12 +202,62 @@ def random_mutation(pose, list_aa_pos: list):
     amino_acids = ["A","R","N","D","C","Q","E","G","H","I",
                    "L","K","M","F","P","S","T","W","Y","V"]
 
-    # Randomly choose a position and an amino acid
-    aa = choice(amino_acids)
+    # Randomly choose a position
     pos = choice(list_aa_pos)
+    current_aa = pose.residue(pos).name1()
+
+    # Choose a replacement that is not the same as the current residue
+    choices = [x for x in amino_acids if x != current_aa]
+    aa = choice(choices)
 
     # Perform mutation return pose
     return perform_mutation(pose, pos, aa)
+
+
+def random_mutation2(pose, list_aa_pos: list):
+    """Perform a random point mutation and identify residues within 8 Å
+    of the mutated residue.
+
+    :param pose: Pose to mutate.
+    :param list_aa_pos: List of residue positions allowed to be mutated.
+    :return: Mutated pose and residues within 8 Å of the mutation.
+    """
+
+    # Create a list of all 20 possible amino acids
+    amino_acids = ["A", "R", "N", "D", "C", "Q", "E", "G", "H", "I",
+                   "L", "K", "M", "F", "P", "S", "T", "W", "Y", "V"]
+
+    # Randomly choose a position
+    pos = choice(list_aa_pos)
+    current_aa = pose.residue(pos).name1()
+    choices = [x for x in amino_acids if x != current_aa]
+    aa = choice(choices)
+
+    # Perform mutation
+    new_pose = perform_mutation(pose, pos, aa)
+
+    # Select the mutated residue
+    target = ResidueIndexSelector(str(pos))
+
+    # Select residues within 20 Å of the mutated residue
+    neighbors = NeighborhoodResidueSelector()
+    neighbors.set_focus_selector(target)
+    neighbors.set_distance(20.0)
+    neighbors.set_include_focus_in_subset(True)
+
+    # Get the selected residues
+    subset = neighbors.apply(new_pose)
+
+    residues_to_relax = []
+
+    for i in range(1, new_pose.total_residue() + 1):
+        if subset[i]:
+            residues_to_relax.append(i)
+
+    return new_pose, residues_to_relax
+
+
+
 # endregion
 
 def relax_structure(pose_to_relax) -> Pose:
@@ -214,16 +267,30 @@ def relax_structure(pose_to_relax) -> Pose:
     :return: relaxed pose
     """
 
+    # set scoring function
+    scorefxn = get_fa_scorefxn()
+
     # Create a copy so the original pose is left unchanged
     testPose = Pose()
     testPose.assign(pose_to_relax)
 
-    # Set up relax parameter
-    # Create the full-atom Rosetta score function
-    scorefxn = get_fa_scorefxn()
+    # constrtain backbone to a certain degree
+    scorefxn.set_weight(ScoreType.coordinate_constraint, 1.0)
+
+    # Configure MoveMap (Allow interface rigid-body movement & local flexibility)
+    movemap = MoveMap()
+    movemap.set_bb(True)
+    movemap.set_chi(True)
+    if testPose.num_jump() > 0:
+        movemap.set_jump(
+            1, True
+        )  # Allows the peptide to shift slightly relative to protein
 
     # Initialize the FastRelax protocol
     relax = FastRelax()
+
+    # apply move map to relax
+    relax.set_movemap(movemap)
 
     # Use the full-atom score function during relaxation
     relax.set_scorefxn(scorefxn)
@@ -239,6 +306,123 @@ def relax_structure(pose_to_relax) -> Pose:
 
     # rename to your desired relaxed structure name
 
+    return testPose
+
+def fast_minimize_structure(
+    pose: Pose, residues_to_relax: list[int]) -> Pose:
+
+
+    scorefxn = get_fa_scorefxn()
+    scorefxn.set_weight(ScoreType.coordinate_constraint, 1.0)
+    test_pose = pose.clone()
+
+    # 1. Select target residues and their 8.0A local neighborhood
+    target_selector = ResidueIndexSelector()
+    for res in residues_to_relax:
+        target_selector.append_index(res)
+
+    nbr_selector = NeighborhoodResidueSelector(
+        target_selector, 8.0, include_focus_in_subset=True
+    )
+    nbr_subset = nbr_selector.apply(test_pose)  # Returns a PyRosetta boolean vector
+
+    # 2. Build MoveMap from the selector subset
+    movemap = MoveMap()
+    movemap.set_bb(False)
+    movemap.set_chi(False)
+    movemap.set_jump(False)
+
+    for i in range(1, len(nbr_subset) + 1):
+        if nbr_subset[i]:
+            movemap.set_chi(i, True)
+            movemap.set_bb(i, True)
+
+    # 3. Minimize
+    min_mover = MinMover()
+    min_mover.movemap(movemap)
+    min_mover.score_function(scorefxn)
+    min_mover.min_type("lbfgs_armijo_nonmonotone")
+    min_mover.tolerance(0.01)
+    min_mover.max_iter(50)
+
+    min_mover.apply(test_pose)
+
+    return test_pose
+
+def fast_minimize_structure2(pose, residues_to_relax, scorefxn):
+    test_pose = pose.clone()
+
+    # 1. Select target mutated residue + 8.0A surrounding shell
+    target_selector = ResidueIndexSelector()
+    for res in residues_to_relax:
+        target_selector.append_index(res)
+
+    shell_selector = NeighborhoodResidueSelector(
+        target_selector, 8.0, include_focus_in_subset=True
+    )
+
+    # 2. STEP A: Local Sidechain Repack (CRITICAL for fixing initial mutation clashes)
+    tf = TaskFactory()
+    tf.push_back(
+        OperateOnResidueSubset(PreventRepackingRLT(), shell_selector, True)
+    )
+    tf.push_back(
+        OperateOnResidueSubset(RestrictToRepackingRLT(), shell_selector, False)
+    )
+
+    packer = PackRotamersMover(scorefxn)
+    packer.task_factory(tf)
+    packer.apply(test_pose)
+
+    # 3. STEP B: Continuous Local Minimization
+    nbr_subset = shell_selector.apply(test_pose)
+    movemap = MoveMap()
+    movemap.set_bb(False)
+    movemap.set_chi(False)
+    movemap.set_jump(False)
+
+    for i in range(1, len(nbr_subset) + 1):
+        if nbr_subset[i]:
+            movemap.set_chi(i, True)
+            movemap.set_bb(i, True)
+
+    min_mover = MinMover()
+    min_mover.movemap(movemap)
+    min_mover.score_function(scorefxn)
+    min_mover.min_type("lbfgs_armijo_nonmonotone")
+    min_mover.tolerance(0.01)
+    min_mover.max_iter(30)
+
+    min_mover.apply(test_pose)
+
+    return test_pose
+
+def relax_structure2(pose_to_relax: Pose) -> Pose:
+    testPose = pose_to_relax.clone()
+    scorefxn = get_fa_scorefxn()
+    # 2. Configure MoveMap targeting the binding region
+    movemap = MoveMap()
+    
+    # Allow rigid-body movement between LqhIII and NaV1.5
+    if testPose.num_jump() > 0:
+        movemap.set_jump(1, True)
+
+    # Enable backbone and sidechain flexibility globally OR restricted to interface
+    movemap.set_bb(True)
+    movemap.set_chi(True)
+
+    # 3. Setup FastRelax
+    relax = FastRelax()
+    relax.set_scorefxn(scorefxn)
+    relax.set_movemap(movemap)
+
+    # REMOVED: relax.constrain_relax_to_start_coords(True)
+    # This allows LqhIII to find its true local energy minimum!
+
+    # 4. Perform Relaxation
+    relax.apply(testPose)
+
+    print(f"Bound State Energy: {scorefxn(testPose):.2f} REU")
     return testPose
 
 # region EXPLORATION
@@ -358,13 +542,17 @@ def contact_map(pdb_file, cutoff, output_name, motif_range=None):
         cbar_kws={"label":"Minimum heavy-atom distance (Å)"}
     )
 
-    plt.xlabel("protein B Residues (Chain B)")
-    plt.ylabel("Protein A Residues (Chain A)")
-    plt.title(f"Protein–Protein Contacts (< {cutoff} Å)")
+    plt.xlabel("LQHIII")
+    plt.ylabel("NaV1.5")
+    plt.title(f"Protein–Peptide Contacts (< {cutoff} Å)")
 
     plt.tight_layout()
     plt.savefig(output_name, dpi=300)
     plt.show()
+
+
+
+# endregion
 
 
 def delta_g(pose):
@@ -376,4 +564,3 @@ def delta_g(pose):
     scorefxn)
     iam.apply(pose)
     return iam.get_interface_dG()
-# end region
