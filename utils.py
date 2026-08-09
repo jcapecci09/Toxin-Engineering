@@ -488,7 +488,7 @@ class AffinityOptimizer():
             if self.max_no_improve == self.no_improve_steps:
                 print('EARLY STOP')
                 print(f'Score did not improve in {self.no_improve_steps} steps')
-                print(f'Terminated algorithm at {i} step')
+                print(f'Terminated algorithm at step' {i})
                 break
 
 
