@@ -3,7 +3,6 @@
 Includes functions to mutate NaV1.5, view contacts, and mutate LQHIII to 
 increase binding.
 
-
 Author: Jimmy Capecci
 """
 
@@ -40,6 +39,7 @@ import pandas as pd
 from random import choice, random
 import tempfile
 from math import exp
+from Bio.PDB.Structure import Structure
 
 
 
@@ -86,7 +86,7 @@ class AffinityOptimizer():
 
     def __init__(self, pdb: str, scoring_function: str, pos_to_mutate: list, temp: int = 1,
                  cooling_rate: float = 0.95, relax: bool = True, relax_every: int = 1,
-                 early_stop_iter: int = 30, number_steps: int = 1000, quiet: bool = False):
+                 early_stop_iter: int = None, number_steps: int = 1000, quiet: bool = False):
         """Initializing affinity optimizer
 
         :param pdb: Path to the PDB file
@@ -97,6 +97,7 @@ class AffinityOptimizer():
         :param relax: Set to True to relax the structure at each step, defaults to True
         :param early_stop_iter: Number of steps without improvement before early stopping the run function, defaults to 30
         :param number_steps: Number of steps in the run function, defaults to 1000
+        :param quiet: If set to True doesn't print outputs to terminal
         """
 
         # initialize all input variable
@@ -108,7 +109,10 @@ class AffinityOptimizer():
         self.cooling_rate = cooling_rate
         self.relax = relax
         self.relax_every = max(1, relax_every)
-        self.max_no_improve = early_stop_iter
+        if early_stop_iter is None:
+            self.max_no_improve = float('inf')
+        else:
+            self.max_no_improve = early_stop_iter
         self.number_steps = number_steps
         self.quiet = quiet
         
@@ -138,6 +142,7 @@ class AffinityOptimizer():
             self.current_score = self.__interface_dg_score(self.current_pose)
             self.best_score = self.current_score
             self.func = self.__ddg  
+            
 
         # Raise error if invalid scoring function
         else:
@@ -145,21 +150,21 @@ class AffinityOptimizer():
                                          'enter either "DDG" or "Distance"')
 
 
-    def __interaction_distance(self, chain1, chain2, pos1, pos2, interaction, new_pose=None):
+    def __interaction_distance(self, chain1: str, chain2: str, 
+                               pos1: int, pos2: int, interaction: str, 
+                               new_pose: Pose=None) -> float:
         """Calculate the shortest potential hydrogen-bond distance between two residues.
 
-        :param pose: PyRosetta Pose containing the residues
         :param chain1: PDB chain ID for the first residue
         :param chain2: PDB chain ID for the second residue
         :param pos1: PDB residue position for the first residue
         :param pos2: PDB residue position for the second residue
+        :param new_pose: PyRosetta Pose containing the residues, defaults to None
         :return: shortest distance between potential hydrogen-bonding atoms in Angstroms
         """
         if new_pose is None:
             new_pose = self.current_pose
         
-        # Create a Biopython PDB parser
-        parser = PDBParser(QUIET=True)
 
         structure = self.__get_structure(new_pose)
 
@@ -204,7 +209,7 @@ class AffinityOptimizer():
         return float(min(distance))
 
 
-    def __salt_bridge_atoms(self, aa1, aa2):
+    def __salt_bridge_atoms(self, aa1: str, aa2: str) -> tuple[str, str]:
         """Identify potential salt-bridge atoms between two amino acids.
 
         :param aa1: Three-letter amino acid code for the first residue
@@ -240,7 +245,7 @@ class AffinityOptimizer():
             )
 
 
-    def __hydrogen_bond_atoms(self, aa1, aa2):
+    def __hydrogen_bond_atoms(self, aa1: str, aa2: str) -> tuple[str, str]:
         """Identify potential hydrogen-bonding atoms between two amino acids.
 
         :param aa1: Three-letter amino acid code for the first residue
@@ -291,7 +296,8 @@ class AffinityOptimizer():
             )
 
 
-    def insert_interaction(self, chain1: str, chain2: str, pos1: int, pos2: int, interaction):
+    def insert_interaction(self, chain1: str, chain2: str,
+                            pos1: int, pos2: int, interaction: str):
         """inserts interaction into the AffinityOptimizer in order to optimize
            distance.
 
@@ -317,7 +323,7 @@ class AffinityOptimizer():
         self.current_score = self.best_score
 
 
-    def __distance_score(self, pose_distances: list):
+    def __distance_score(self, pose_distances: list) -> float:
         """finds score of give distances for poses
 
         :param pose_distances: distances between interactions
@@ -336,7 +342,7 @@ class AffinityOptimizer():
         return score
 
 
-    def find_distances(self, pose: Pose =None):
+    def find_distances(self, pose: Pose=None) -> list[float]:
         """Finds distances of all interactions
 
         :param pose: pose to find distances, defaults to None
@@ -421,7 +427,7 @@ class AffinityOptimizer():
         self.temp *= self.cooling_rate
 
 
-    def __interface_dg_score(self, pose: Pose):
+    def __interface_dg_score(self, pose: Pose) -> float:
         """Calculate the binding affinity of a protein complex.
 
         Uses the InterfaceAnalyzerMover to calculate the interface binding
@@ -449,7 +455,7 @@ class AffinityOptimizer():
         old_score = self.current_score
         self.__algorithm(new_pose, new_score, old_score)
 
-
+    
     def run(self):
         """Run the affinity optimization algorithm.
 
@@ -488,7 +494,7 @@ class AffinityOptimizer():
             if self.max_no_improve == self.no_improve_steps:
                 print('EARLY STOP')
                 print(f'Score did not improve in {self.no_improve_steps} steps')
-                print(f'Terminated algorithm at step' {i})
+                print(f'Terminated algorithm at step {i}')
                 break
 
 
@@ -498,6 +504,7 @@ class AffinityOptimizer():
         Prints the amino acids, chains, positions, and calculated distance
         for each interaction in the current structure.
         """
+
         # Get the current structure and first model
         # Get the current structure and first model
         structure = self.__get_structure()
@@ -513,12 +520,16 @@ class AffinityOptimizer():
             print(f'Distance: {self.distances[num]}')
 
 
-    def __get_structure(self, new_pose=None):
+    def __get_structure(self, new_pose=None) -> Structure:
         """Convert a PyRosetta pose into a Biopython structure.
         Uses a temporary PDB file to convert the PyRosetta pose into a
         Uses a temporary PDB file to convert the PyRosetta pose into a
         Biopython Structure object.
+
+        :param new_pose: pose to get structure, defaults to None
+        :return: Biopython structure object
         """
+
         # if no pose ios given use current pose
         # if no pose ios given use current pose
         if new_pose is None:
@@ -540,39 +551,51 @@ class AffinityOptimizer():
         return structure 
 
 
-    def report_score(self):
+    def report_score(self) -> dict[str, float | Pose | str | list]:
         """Return a consistent report of optimization results.
 
         Returns a dict with at least the keys `best_score`, and
         `best_pose_relaxed_energy`. For DDG, the score is the interface ΔG of the
         relaxed best pose. For Distance, the score is the distance-based score of
         the relaxed best pose.
+
+        :return: dictionary containing results from run function
         """
+
+        # initialize variable
         scorefxn = get_fa_scorefxn()
         relaxed_score = None
         best_pose_relaxed_energy = None
         best_distances = None
         original_score = None
 
+        # try the following
         try:
+
+            # relax the pose to get a more realistic structure, find energy
             relaxed_pose = relax_structure(self.best_pose.clone())
             best_pose_relaxed_energy = scorefxn(relaxed_pose)
 
+            # if scoring function is DDG find the new scores
             if self.scoring_function == 'DDG':
                 relaxed_score = self.__interface_dg_score(relaxed_pose)
                 original_score = self.__interface_dg_score(self.original_pose)
+
+            # if scoring function is Distance find the new distances and scores
             else:
                 best_distances = self.find_distances(relaxed_pose)
                 original_distances = self.find_distances(self.original_pose)
                 relaxed_score = self.__distance_score(best_distances)
                 original_score = self.__distance_score(original_distances)
 
+        # report error if couldnt get scores
         except Exception as exc:
             relaxed_pose = None
             best_pose_relaxed_energy = None
             relaxed_score = getattr(self, "best_score", None)
             print(f"report_score error: {exc}")
 
+        # build dictionary for report
         report = {
             "best_score": relaxed_score,
             "best_pose_energy": best_pose_relaxed_energy,
@@ -582,6 +605,7 @@ class AffinityOptimizer():
 
         }
 
+        # add distances in if scoring function is distance
         if self.scoring_function == 'Distance':
             report["best_distances"] = best_distances
             report['original_distances'] = original_distances
@@ -593,7 +617,7 @@ class AffinityOptimizer():
 
 
 # region MUTATION SETUP
-def pack(pose, posi, amino, scorefxn):
+def pack(pose, posi, amino):
     """Mutate a specified residue to a target amino acid and locally repack
     neighboring side chains using the provided Rosetta score function.
 
@@ -604,7 +628,6 @@ def pack(pose, posi, amino, scorefxn):
     :param pose: Pose to mutate
     :param posi: Position on pose to mutate
     :param amino: amino acid to be mutated in pose
-    :param scorefxn: Rosetta scoring function used during packing
     """
 
     # Select Mutate Position
@@ -673,10 +696,10 @@ def perform_mutation(pose, pos, amino, quiet: bool = False):
 
 
     # Create the default Rosetta score function
-    scorefxn = get_score_function()
+    scorefxn = get_fa_scorefxn()
 
     # Perform packing
-    pack(mutant_pose, pos, amino, scorefxn)
+    pack(mutant_pose, pos, amino)
 
 
     # print useful information
@@ -731,7 +754,7 @@ def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str) -> Pose:
     # For each position in sequence needed to be mutated
     # Replace with new aa
     for pos, aa in zip(range(start, len(mutation) + start), mutation):
-        new_pose = relax_structure2(perform_mutation(new_pose, pos + 1, aa))
+        new_pose = relax_structure(perform_mutation(new_pose, pos + 1, aa))
         print(f'{counter}/{len_mutation} mutations inserted')
         counter += 1
 
@@ -779,6 +802,7 @@ def random_mutation(pose, list_aa_pos: list, quiet: bool = False):
             residues_to_relax.append(i)
 
     return new_pose, residues_to_relax
+
 
 # endregion
 
@@ -874,79 +898,6 @@ def fast_minimize_structure(
 
     return test_pose
 
-def fast_minimize_structure2(pose, residues_to_relax, scorefxn):
-    test_pose = pose.clone()
-
-    # 1. Select target mutated residue + 8.0A surrounding shell
-    target_selector = ResidueIndexSelector()
-    for res in residues_to_relax:
-        target_selector.append_index(res)
-
-    shell_selector = NeighborhoodResidueSelector(
-        target_selector, 8.0, include_focus_in_subset=True
-    )
-
-    # 2. STEP A: Local Sidechain Repack (CRITICAL for fixing initial mutation clashes)
-    tf = TaskFactory()
-    tf.push_back(
-        OperateOnResidueSubset(PreventRepackingRLT(), shell_selector, True)
-    )
-    tf.push_back(
-        OperateOnResidueSubset(RestrictToRepackingRLT(), shell_selector, False)
-    )
-
-    packer = PackRotamersMover(scorefxn)
-    packer.task_factory(tf)
-    packer.apply(test_pose)
-
-    # 3. STEP B: Continuous Local Minimization
-    nbr_subset = shell_selector.apply(test_pose)
-    movemap = MoveMap()
-    movemap.set_bb(False)
-    movemap.set_chi(False)
-    movemap.set_jump(False)
-
-    for i in range(1, len(nbr_subset) + 1):
-        if nbr_subset[i]:
-            movemap.set_chi(i, True)
-            movemap.set_bb(i, True)
-
-    min_mover = MinMover()
-    min_mover.movemap(movemap)
-    min_mover.score_function(scorefxn)
-    min_mover.min_type("lbfgs_armijo_nonmonotone")
-    min_mover.tolerance(0.01)
-    min_mover.max_iter(30)
-
-    min_mover.apply(test_pose)
-
-    return test_pose
-
-def relax_structure2(pose_to_relax: Pose) -> Pose:
-    testPose = pose_to_relax.clone()
-    scorefxn = get_fa_scorefxn()
-    # 2. Configure MoveMap targeting the binding region
-    movemap = MoveMap()
-    
-    # Allow rigid-body movement between LqhIII and NaV1.5
-    if testPose.num_jump() > 0:
-        movemap.set_jump(1, True)
-
-    # Enable backbone and sidechain flexibility globally OR restricted to interface
-    movemap.set_bb(True)
-    movemap.set_chi(True)
-
-    # 3. Setup FastRelax
-    relax = FastRelax()
-    relax.set_scorefxn(scorefxn)
-    relax.set_movemap(movemap)
-
-    # 4. Perform Relaxation
-    relax.apply(testPose)
-
-
-
-    return testPose
 
 # endregion
 
