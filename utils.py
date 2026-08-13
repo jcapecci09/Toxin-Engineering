@@ -40,6 +40,8 @@ from random import choice, random
 import tempfile
 from math import exp
 from Bio.PDB.Structure import Structure
+from pathlib import Path
+from itertools import chain
 
 
 
@@ -95,6 +97,7 @@ class AffinityOptimizer():
         :param temp: Initial temperature indicating how exploratory the run function is, defaults to 1
         :param cooling_rate: How quickly the temperature decreases, defaults to 0.95
         :param relax: Set to True to relax the structure at each step, defaults to True
+        :param relax_every: Frequency at which the pose is relaxed
         :param early_stop_iter: Number of steps without improvement before early stopping the run function, defaults to 30
         :param number_steps: Number of steps in the run function, defaults to 1000
         :param quiet: If set to True doesn't print outputs to terminal
@@ -494,7 +497,7 @@ class AffinityOptimizer():
             if self.max_no_improve == self.no_improve_steps:
                 print('EARLY STOP')
                 print(f'Score did not improve in {self.no_improve_steps} steps')
-                print(f'Terminated algorithm at step {i}')
+                print(f'Terminated algorithm at step {i + 1}')
                 break
 
 
@@ -1028,3 +1031,44 @@ def contact_map(pdb_file, cutoff, output_name, motif_range=None):
     plt.show()
 
 # endregion
+
+# region RESULTS
+def get_sequence(pdb_file):
+    pose = pose_from_pdb(pdb_file)
+    return pose.sequence()
+
+def compare_sequence(original, new):
+    seq = get_sequence(original)
+    new_seq = get_sequence(new)
+    mutations = []
+
+    for num, (i, j) in enumerate(zip(seq, new_seq)):
+        if i != j:
+            mutations.append(f'{i}{num}{j}')
+    return mutations
+
+def grab_pdbs(function):
+    parent_dir = Path('variants')
+
+    # Finds all .pdb files inside dg* folders
+    pdb_files = list(parent_dir.glob(f"{function}*/**/*.pdb"))
+    return pdb_files
+
+def mutation_df(pdbs):
+    data = []
+    paths = []
+
+    for pdb in pdbs:
+        d = compare_sequence('pdb_files/7K18_AQPMSSSPKET_mutant.pdb', str(pdb))
+        data.append(d)
+        path = [str(pdb) for i in range(len(d))]
+        paths.append(path)
+
+
+
+    df = pd.DataFrame({
+        'path': list(chain.from_iterable(paths)),
+        'mutation': list(chain.from_iterable(data))
+    })
+
+    return df
