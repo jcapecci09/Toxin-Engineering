@@ -719,12 +719,13 @@ def perform_mutation(pose, pos, amino, quiet: bool = False):
     return mutant_pose
 
 
-def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str) -> Pose:
+def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str, start: int = None) -> Pose:
     """Sequentially insert a mutation. Relaxes structures after each mutation. 
 
     :param pdb: pdb file containing sequence you wish to mutate
     :param seq_to_mutate: the sequence you want to change
     :param mutation: Mutation you wish to insert
+    :param start: indicate starting position if more than one motif is present, defaults to None
     :return: Pose of pdb file with mutation
     """
 
@@ -732,7 +733,7 @@ def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str) -> Pose:
     len_seq = len(seq_to_mutate)
     len_mutation = len(mutation)
 
-    # raise errror if input is wrong
+    # raise error if input is wrong
     if len_seq != len_mutation:
         raise InsertMutationError(
         f"Length mismatch: mutation sequence has {len_mutation} residues, "
@@ -749,7 +750,9 @@ def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str) -> Pose:
     pose_seq = pose.sequence()
 
     # Find starting index of sequence that needs to be mutated
-    start = pose_seq.find(seq_to_mutate)
+    if start is None:
+        start = pose_seq.find(seq_to_mutate)
+    print(start)
 
     # intialize counter
     counter = 1
