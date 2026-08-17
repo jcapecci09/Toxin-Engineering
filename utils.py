@@ -8,42 +8,45 @@ Author: Jimmy Capecci
 
 # region IMPORT LIBRARIES & Initialize PyRosetta
 
-# Import pyrosettta functions and objects
-from pyrosetta import (init, get_score_function, pose_from_pdb, Pose, get_fa_scorefxn)
-from pyrosetta.rosetta.core.select.residue_selector import (
-    ResidueIndexSelector,
-    NeighborhoodResidueSelector,
-    NotResidueSelector)
-from pyrosetta.rosetta.core.pack.task import TaskFactory
-from pyrosetta.rosetta.core.pack.task.operation import (
-    InitializeFromCommandline,
-    IncludeCurrent,
-    NoRepackDisulfides,
-    PreventRepackingRLT,
-    RestrictToRepackingRLT,
-    RestrictAbsentCanonicalAASRLT,
-    OperateOnResidueSubset)
-from pyrosetta.rosetta.protocols.minimization_packing import PackRotamersMover, MinMover
-from pyrosetta.rosetta.protocols.relax import FastRelax
-from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
-from pyrosetta.rosetta.core.kinematics import MoveMap
-from pyrosetta.rosetta.core.scoring import ScoreType
 
-# Import other libaries 
+# Standard libaries 
 import os
-import numpy as np
+import tempfile
+from itertools import chain
+from math import exp
+from pathlib import Path
+from random import choice, random
+
+# Other libraries
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 from Bio.PDB import PDBParser
-import pandas as pd
-from random import choice, random
-import tempfile
-from math import exp
 from Bio.PDB.Structure import Structure
-from pathlib import Path
-from itertools import chain
 
-
+# PyRosetta 
+from pyrosetta import Pose, get_fa_scorefxn, init, pose_from_pdb
+from pyrosetta.rosetta.core.kinematics import MoveMap
+from pyrosetta.rosetta.core.pack.task import TaskFactory
+from pyrosetta.rosetta.core.pack.task.operation import (
+    IncludeCurrent,
+    InitializeFromCommandline,
+    NoRepackDisulfides,
+    OperateOnResidueSubset,
+    PreventRepackingRLT,
+    RestrictAbsentCanonicalAASRLT,
+    RestrictToRepackingRLT,
+)
+from pyrosetta.rosetta.core.scoring import ScoreType
+from pyrosetta.rosetta.core.select.residue_selector import (
+    NeighborhoodResidueSelector,
+    NotResidueSelector,
+    ResidueIndexSelector,
+)
+from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
+from pyrosetta.rosetta.protocols.minimization_packing import MinMover, PackRotamersMover
+from pyrosetta.rosetta.protocols.relax import FastRelax
 
 # Initialize pyrosetta
 init(options=[
@@ -82,13 +85,13 @@ class AffinityOptimizerError(Exception):
     pass
 
 
-class AffinityOptimizer():
+class AffinityOptimizer:
     """Optimizes Affinity Between two chains in a pdb file"""
 
 
     def __init__(self, pdb: str, scoring_function: str, pos_to_mutate: list, temp: int = 1,
                  cooling_rate: float = 0.95, relax: bool = True, relax_every: int = 1,
-                 early_stop_iter: int = None, number_steps: int = 1000, quiet: bool = False):
+                 early_stop_iter: int | None = None, number_steps: int = 1000, quiet: bool = False):
         """Initializing affinity optimizer
 
         :param pdb: Path to the PDB file
@@ -514,12 +517,12 @@ class AffinityOptimizer():
         model = structure[0]
          # Loop through each interaction and display the residues and distance
          # Loop through each interaction and display the residues and distance
-        for num, (chain, pos) in enumerate(zip(self.chains, self.positions)):
-            aa1 = model[chain[0]][pos[0]].get_resname()
-            aa2 = model[chain[1]][pos[1]].get_resname()
+        for num, (chain_var, pos) in enumerate(zip(self.chains, self.positions)):
+            aa1 = model[chain_var[0]][pos[0]].get_resname()
+            aa2 = model[chain_var[1]][pos[1]].get_resname()
             print(f'Interaction {num + 1}')
-            print(f'AA: {aa1}, chain: {chain[0]}, pos: {pos[0]}')
-            print(f'AA: {aa2}, chain: {chain[1]}, pos: {pos[1]}')
+            print(f'AA: {aa1}, chain: {chain_var[0]}, pos: {pos[0]}')
+            print(f'AA: {aa2}, chain: {chain_var[1]}, pos: {pos[1]}')
             print(f'Distance: {self.distances[num]}')
 
 
@@ -710,7 +713,7 @@ def perform_mutation(pose, pos, amino, quiet: bool = False):
     if not quiet:
         print()
         print('-' * 50)
-        print(f'TASK COMPLETE')
+        print('TASK COMPLETE')
         print(f'Successfully mutated {pose.residue(pos).name()} at position {pos} to {mutant_pose.residue(pos).name()}')
         print(f'Orginal Energy {scorefxn(pose)}; New energy: {scorefxn(mutant_pose)}')
         print('-' * 50)
@@ -719,7 +722,7 @@ def perform_mutation(pose, pos, amino, quiet: bool = False):
     return mutant_pose
 
 
-def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str, start: int = None) -> Pose:
+def insert_mutation(pdb: str, seq_to_mutate: str, mutation: str, start: int | None = None) -> Pose:
     """Sequentially insert a mutation. Relaxes structures after each mutation. 
 
     :param pdb: pdb file containing sequence you wish to mutate
@@ -977,8 +980,7 @@ def contacts(pdb_file: str, cutoff: int, motif_range=None):
                      d = A_a - B_a
 
                      # find minimm distance
-                     if d < min_dist:
-                         min_dist = d
+                     min_dist = min(min_dist, d)
             
             # add minimum distance to contact_matrix at position on chain A and 
             # chain B
@@ -1035,43 +1037,85 @@ def contact_map(pdb_file, cutoff, output_name, motif_range=None):
 
 # endregion
 
+
 # region RESULTS
-def get_sequence(pdb_file):
+
+def get_sequence(pdb_file: str) -> str:
+    """gets sequence from a pdb file
+
+    :param pdb_file: PDB file to get sequence
+    :return: Sequence as string
+    """
+    
     pose = pose_from_pdb(pdb_file)
     return pose.sequence()
 
-def compare_sequence(original, new):
+
+def compare_sequence(original: str, new: str) -> list[str]:
+    """Compares two pdbs returns their sequence 
+    and finds the differences between them. Sequences must be
+    of equal length.
+
+    :param original: first pdb
+    :param new: second pdb
+    :return: List contaning differences between them ex: E120G
+    """
+
+    # grab sequences from pdbs
     seq = get_sequence(original)
     new_seq = get_sequence(new)
+
+    # intialize mutations list
     mutations = []
 
+    # For each position find the differences and add to list
     for num, (i, j) in enumerate(zip(seq, new_seq)):
         if i != j:
             mutations.append(f'{i}{num}{j}')
+
+    # return list
     return mutations
 
-def grab_pdbs(function):
+
+def grab_pdbs(function: str) -> list[str]:
+    """Grab all the pdbs from a directory
+
+    :param function: scoring fucntion used
+    :return: pdb files to each
+    """
     parent_dir = Path('variants')
 
-    # Finds all .pdb files inside dg* folders
+    # Finds all .pdb files inside functions folders
     pdb_files = list(parent_dir.glob(f"{function}*/**/*.pdb"))
     return pdb_files
 
-def mutation_df(pdbs):
+
+def mutation_df(pdbs) -> pd.DataFrame:
+    """Give a list of pdbs and compares it to the referece
+
+    :param pdbs: list of pdb files
+    :return: a dataframe containing all difference comapred to the reference
+    """
+
+    # intiate data and paths lists
     data = []
     paths = []
 
+    # for each pdb compare to reference 
+    # add data to list and paths to list
     for pdb in pdbs:
         d = compare_sequence('pdb_files/7K18_AQPMSSSPKET_mutant.pdb', str(pdb))
         data.append(d)
         path = [str(pdb) for i in range(len(d))]
         paths.append(path)
 
-
-
+    # create dataframe containing mutations and paths
     df = pd.DataFrame({
         'path': list(chain.from_iterable(paths)),
         'mutation': list(chain.from_iterable(data))
     })
 
+    # return df
     return df
+
+# endregion
