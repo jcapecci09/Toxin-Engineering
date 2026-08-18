@@ -54,6 +54,8 @@ The goal of Phase 2 was to mutate **LQHIII** to improve its predicted binding to
 - **Distance Score:** Evaluates targeted interactions such as hydrogen bonds and salt bridges.
 - **ΔG:** Evaluates overall predicted binding energetics, with more negative values indicating stronger predicted binding.
 
+**Note**: Native LQHIII–NaV1.5 interactions were examined to identify key contacts near the engineered binding region. For the cardiac-like complex, K64–E1616, H15–S1612, and H43–S1611 were selected as potential salt bridge and hydrogen bond targets for distance-based optimization. The full interaction analysis is provided in project.ipynb.
+
 The baseline hyperparameters are shown below:
 
 ```python
