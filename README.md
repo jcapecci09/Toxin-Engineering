@@ -63,7 +63,7 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 
 **Jimmy Capecci**  
 M.S. Bioinformatics  
-Loyola University Chicago
+Loyola University Chicago  
 [GitHub](https://github.com/jcapecci09) 
 
 ## 🙏 Acknowledgements
