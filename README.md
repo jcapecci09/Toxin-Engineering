@@ -60,8 +60,12 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 ## 📊 Results
 
 ### Runtime
+![](Data/figures/runtime.png)
 
 ### Best Variants
+![](Data/figures/top_variants_dg_dis_scatter_wt.png)
+![](Data/figures/Best_variants_wt_scatter.png)
+![](Data/figures/top_variants_sequences.png)
 
 
 ## 👤 Author
