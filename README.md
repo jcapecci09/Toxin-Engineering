@@ -133,6 +133,12 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 
 5. Work through `project.ipynb` to produce results
 
+## 🧾 Conclusion
+This project explored how computational protein engineering can be used to redesign the LQHIII scorpion toxin toward a cardiac-like NaV1.5 binding environment. By first modifying NaV1.5 to mimic the ABLIM1 sequence and then using AffinityOptimizer to explore mutations in LQHIII, I was able to generate and compare variants across different optimization conditions.
+
+One of the main takeaways from the results was that optimizing for targeted interactions and optimizing for overall binding energy did not always produce the same variants. The Distance Score produced candidates with better interaction geometry and, in several cases, maintained ΔG values comparable to the reference structures. This suggests that considering both structural interactions and overall binding energetics can be useful when selecting candidates.
+
+The variants generated here are computational predictions and still need to be experimentally tested to determine whether they actually improve binding to cardiac proteins. However, this project provides a starting point for using PyRosetta and simulated annealing to explore protein–protein interface engineering and prioritize candidates for future experimental work.
 
 ## 👤 Author
 
