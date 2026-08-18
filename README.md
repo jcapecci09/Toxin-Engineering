@@ -2,7 +2,7 @@
 
 This project aims to engineer the scorpion toxin LQHIII to bind cardiac proteins. The workflow uses the experimentally verified NaV1.5–LQHIII complex as a starting point, modifies NaV1.5 to mimic cardiac proteins, and then engineers LQHIII to bind the resulting cardiac-like complex.
 
-## Highlights
+## ✨ Highlights
 
 This project provides two reusable tools that may be useful for protein engineering and structural analysis:
 
@@ -18,9 +18,9 @@ The complete analysis is detailed in `project.ipynb` and consists of the followi
 3. Use `AffinityOptimizer` to engineer LQHIII and generate variants with potentially improved binding affinity for the cardiac-like NaV1.5.
 4. Explore and evaluate the resulting variants.
    
-## Overview
+## 🧬 Overview
 
-## Usage Instructions
+## ⚙️ Usage Instructions
 
 ### <u>Project Setup</u>
 
@@ -55,14 +55,10 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 
 4. Launch Jupyter Notebook or VS Code and select **Python (mol-dyn)** as your active kernel.
 
-### Overview
+5. Work through `project.ipynb` to produce results
 
-* `demo.ipynb`: Quick overview of the pipeline and core tools.
-* `project.ipynb`: Main analysis notebook.
-* `utils.py`: Supporting utility functions and backend code.
+## 📊 Results
 
-## Results
+## 👤 Author
 
-## Authors
-
-## Acknowledgements
+## 🙏 Acknowledgements
