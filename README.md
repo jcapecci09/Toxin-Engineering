@@ -68,3 +68,5 @@ I'm [Jimmy Capecci](https://github.com/jcapecci09), a Bioinformatics graduate st
 
 
 ## 🙏 Acknowledgements
+
+I would like to thank Dr. Kekenes-Huskey and Alec Loftus for their guidance throughout this project. 
