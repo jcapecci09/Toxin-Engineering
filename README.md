@@ -52,14 +52,17 @@ The goal of Phase 2 was to mutate **LQHIII** to improve its predicted binding to
 The baseline hyperparameters are shown below:
 
 ```python
+# set amino acids to allow mutation
+aa_mutate = [107, 108, 109, 110, 113, 114, 117, 118, 120, 121,
+                141, 142, 157, 159, 160, 161, 162, 166]
 opt1 = AffinityOptimizer(
     'pdb_files/7K18_AQPMSSSPKET_mutant.pdb',
     scoring_function='DDG',
     pos_to_mutate=aa_mutate,
-    temp=temp,
-    cooling_rate=cooling_rate,
-    relax=relax,
-    relax_every=relax_every,
+    temp=20,
+    cooling_rate=0.95,
+    relax=True,
+    relax_every=1,
     early_stop_iter=75,
     number_steps=500,
     quiet=True
