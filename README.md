@@ -18,7 +18,62 @@ The complete analysis is detailed in `project.ipynb` and consists of the followi
 3. Use `AffinityOptimizer` to engineer LQHIII and generate variants with potentially improved binding affinity for the cardiac-like NaV1.5.
 4. Explore and evaluate the resulting variants.
    
-## 🧬 Overview
+## 🛠️ Methods
+
+This section provides a brief overview of the methods used in this analysis. The workflow consisted of two major phases, described below:
+
+### Phase 1: Generating a Cardiac-Like NaV1.5
+
+The goal of Phase 1 was to mimic cardiac protein sequences by sequentially introducing mutations into NaV1.5. Mutations were introduced one amino acid at a time until the **ABLIM1 MSSSP motif**, associated with GSK3β recognition, was incorporated.
+
+**NaV1.5:** `GTVLSDIIQKY` → **Cardiac-like:** `AQPMSSSPKET`
+
+```python
+mutant_pose = insert_mutation('pdb_files/7K18_relaxed.pdb', 'GTVLSDIIQKY', 'AQPMSSSPKET')
+```
+
+### Phase 2: Generate LQHIII Variants
+
+The goal of Phase 2 was to mutate **LQHIII** to improve its predicted binding to the cardiac-like NaV1.5. A **simulated annealing** approach was used to explore mutations and optimize binding scores.
+
+- Randomly introduce mutations and relax the surrounding structure
+- Score each variant using **distance-based interactions** and **ΔG**
+- Accept favorable mutations and occasionally accept unfavorable ones to explore alternative sequences
+- Gradually lower the temperature to favor better-performing variants
+- Repeat for a set number of iterations
+
+**Scoring:**
+- **Distance Score:** Evaluates targeted interactions such as hydrogen bonds and salt bridges.
+- **ΔG:** Evaluates overall predicted binding energetics, with more negative values indicating stronger predicted binding.
+
+The baseline hyperparameters are shown below:
+
+```python
+opt1 = AffinityOptimizer(
+    'pdb_files/7K18_AQPMSSSPKET_mutant.pdb',
+    scoring_function='DDG',
+    pos_to_mutate=aa_mutate,
+    temp=temp,
+    cooling_rate=cooling_rate,
+    relax=relax,
+    relax_every=relax_every,
+    early_stop_iter=75,
+    number_steps=500,
+    quiet=True
+)
+```
+
+**Note:** A total of 160 variants were generated: 80 using the Distance Score and 80 using the ΔG score. Hyperparameters were adjusted between runs to explore different optimization conditions.
+
+## 📊 Results 
+
+### Runtime
+![](Data/figures/runtime.png)
+
+### Best Variants
+![](Data/figures/top_variants_dg_dis_scatter_wt.png)
+![](Data/figures/Best_variants_wt_scatter.png)
+![](Data/figures/top_variants_sequences.png)
 
 ## ⚙️ Usage Instructions
 
@@ -56,16 +111,6 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 4. Launch Jupyter Notebook or VS Code and select **Python (mol-dyn)** as your active kernel.
 
 5. Work through `project.ipynb` to produce results
-
-## 📊 Results
-
-### Runtime
-![](Data/figures/runtime.png)
-
-### Best Variants
-![](Data/figures/top_variants_dg_dis_scatter_wt.png)
-![](Data/figures/Best_variants_wt_scatter.png)
-![](Data/figures/top_variants_sequences.png)
 
 
 ## 👤 Author
