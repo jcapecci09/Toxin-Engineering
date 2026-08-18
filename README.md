@@ -63,7 +63,9 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 
 ## 👤 Author
 
-I'm currently pursuing a Master's degree in Bioinformatics at Loyola University Chicago. This project was completed as part of my internship at the Stritch School of Medicine in the Peter Kekenes-Huskey Lab, where I worked on computational approaches to protein engineering and structural analysis.
+I'm [**Jimmy Capecci**]((https://github.com/jcapecci09)), a Bioinformatics graduate student at Loyola University Chicago. I completed this project during my internship at the Stritch School of Medicine in the Peter Kekenes-Huskey Lab, where I explored computational approaches to protein engineering and structural analysis.
+
+[GitHub]
 
 [GitHub](https://github.com/jcapecci09)
 
