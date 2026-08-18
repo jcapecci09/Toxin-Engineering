@@ -17,6 +17,9 @@ The complete analysis is detailed in `project.ipynb` and consists of the followi
 2. Use `insert_mutation` to redesign NaV1.5 to mimic cardiac proteins.
 3. Use `AffinityOptimizer` to engineer LQHIII and generate variants with potentially improved binding affinity for the cardiac-like NaV1.5.
 4. Explore and evaluate the resulting variants.
+
+## 🧬 Overview
+
    
 ## 🛠️ Methods
 
@@ -99,7 +102,7 @@ mamba env create -f mol-dyn.yml
 2. Activate the environment:
    
 ```
-conda activate mol-dyn
+mamba activate mol-dyn
 ```
 
 3. Register the environment as a Jupyter kernel:
