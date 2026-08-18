@@ -82,13 +82,21 @@ opt1 = AffinityOptimizer(
 ![](Data/figures/runtime.png)
 **Figure 1. Runtime of `AffinityOptimizer`.** Runtime depends on the size of the complex, selected hyperparameters, and computational system. Using the baseline hyperparameters described above and the truncated 167-AA complex, `AffinityOptimizer` typically required **5–10 minutes per variant**. The **Distance Score** generally ran faster than the **ΔG Score**. Disabling relaxation significantly reduced runtime but may reduce structural quality, as the model is less constrained to maintain a realistic complex.
 
+<br>
+
 ### Best Variants
 ![](Data/figures/top_variants_dg_dis_scatter_wt.png)
-**Figure 2. Top 15 variants from Distance Score and top 15 variants from ΔG Score compared with the Wildtype and Initial structures.** The **Wildtype** represents the experimentally validated complex before Phase 1, while the **Initial** structure represents the cardiac-like NaV1.5 complex generated after Phase 1. Variants optimized using the **Distance Score** generally showed improvements in both targeted interaction distances and overall predicted binding energy (ΔG). In contrast, variants optimized directly for **ΔG** achieved more favorable binding energies but generally had higher Distance Squared Error (DSE), indicating that improved overall binding energetics did not necessarily correspond to improved targeted interactions. 
+**Figure 2. Top 15 variants from Distance Score and top 15 variants from ΔG Score compared with the Wildtype and Initial structures.** The **Wildtype** represents the experimentally validated complex before Phase 1, while the **Initial** structure represents the cardiac-like NaV1.5 complex generated after Phase 1. Variants optimized using the **Distance Score** generally showed improvements in both targeted interaction distances and overall predicted binding energy (ΔG). In contrast, variants optimized directly for **ΔG** achieved more favorable binding energies but generally had higher Distance Squared Error (DSE), indicating that improved overall binding energetics did not necessarily correspond to improved targeted interactions.  
+
+<br>
+
 ![](Data/figures/Best_variants_wt_scatter.png)
-**Figure 3. Top candidate variants based on Distance Squared Error (DSE) and Rosetta estimated ΔG.** Variants with DSE values below 7 and ΔG values below −24.5 were selected as potential candidates for binding to the cardiac-like NaV1.5. The **Wildtype** is shown as a reference for comparison. Several hyperparameter conditions produced variants with scores similar to the Wildtype. The **Distance Score optimization with relaxation disabled** produced the lowest DSE while maintaining a comparable ΔG, suggesting that targeted interaction distances could be optimized without substantially reducing predicted binding affinity.
+**Figure 3. Top candidate variants based on Distance Squared Error (DSE) and Rosetta estimated ΔG.** Variants with DSE values below 7 and ΔG values below −24.5 were selected as potential candidates for binding to the cardiac-like NaV1.5. The **Wildtype** is shown as a reference for comparison. Several hyperparameter conditions produced variants with scores similar to the Wildtype. The **Distance Score optimization with relaxation disabled** produced the lowest DSE while maintaining a comparable ΔG, suggesting that targeted interaction distances could be optimized without substantially reducing predicted binding affinity.  
+
+<br>
+
 ![](Data/figures/top_variants_sequences.png)
-**Figure 4. Sequence Comparison of Top Candidate Variants.** Amino acid sequences of the top candidate variants compared with the relaxed wildtype reference. Gray indicates sequence differences, while red indicates residues involved in important interactions.
+**Figure 4. Sequence Comparison of Top Candidate Variants.** Amino acid sequences of the top candidate variants compared with the relaxed wildtype reference. Gray indicates sequence differences, while red indicates residues involved in important interactions.  
 
 ## ⚙️ Usage Instructions
 
