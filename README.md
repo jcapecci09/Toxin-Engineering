@@ -8,7 +8,7 @@ This project aims to engineer the scorpion toxin LQHIII to bind cardiac proteins
 
 ## Usage Instructions
 
-### Project Setup
+### <u>Project Setup</u>
 
 1. Clone the repository and navigate into the project directory:
    
@@ -17,7 +17,7 @@ git clone https://github.com/jcapecci09/Toxin-Engineering.git
 cd Toxin-Engineering
 ```
 
-### Environment Setup
+### <u>Environment Setup</u>
 
 This analysis requires a Mamba environment. Ensure you have [Mamba installed](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html) before proceeding.
 
