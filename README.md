@@ -69,7 +69,7 @@ opt1 = AffinityOptimizer(
 )
 ```
 
-**Note:** A total of 160 variants were generated: 80 using the Distance Score and 80 using the ΔG score. Hyperparameters were adjusted between runs to explore different optimization conditions.
+**Note:** A total of 160 variants were generated: 80 using the **Distance Score** and 80 using the **ΔG Score**. Hyperparameters such as `temp`, `cooling_rate`, and `relax` were adjusted between runs to explore different optimization conditions.
 
 ## 📊 Results 
 
