@@ -82,8 +82,6 @@ opt1 = AffinityOptimizer(
 ![](Data/figures/runtime.png)
 **Figure 1. Runtime of `AffinityOptimizer`.** Runtime depends on the size of the complex, selected hyperparameters, and computational system. Using the baseline hyperparameters described above and the truncated 167-AA complex, `AffinityOptimizer` typically required **5–10 minutes per variant**. The **Distance Score** generally ran faster than the **ΔG Score**. Disabling relaxation significantly reduced runtime but may reduce structural quality, as the model is less constrained to maintain a realistic complex.
 
-<br>
-
 ### Best Variants
 ![](Data/figures/top_variants_dg_dis_scatter_wt.png)
 **Figure 2. Top 15 variants from Distance Score and top 15 variants from ΔG Score compared with the Wildtype and Initial structures.** The **Wildtype** represents the experimentally validated complex before Phase 1, while the **Initial** structure represents the cardiac-like NaV1.5 complex generated after Phase 1. Variants optimized using the **Distance Score** generally showed improvements in both targeted interaction distances and overall predicted binding energy (ΔG). In contrast, variants optimized directly for **ΔG** achieved more favorable binding energies but generally had higher Distance Squared Error (DSE), indicating that improved overall binding energetics did not necessarily correspond to improved targeted interactions.  
