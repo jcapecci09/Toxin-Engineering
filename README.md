@@ -20,7 +20,12 @@ The complete analysis is detailed in `project.ipynb` and consists of the followi
 
 ## 🧬 Overview
 
-   
+Intrinsically disordered regions (IDRs) are flexible regions of proteins that do not adopt a single stable structure, making them difficult to study using traditional structural methods (Sun et al., 2025). Despite this challenge, IDRs play important roles in regulating protein interactions and often contain **phosphorylation sites** that can alter protein function.
+
+**ABLIM1**, a cardiac myofilament protein, contains IDRs with phosphorylation sites that may regulate its interactions with other cardiac proteins. This project uses the **ABLIM1 MSSSP motif**, a phosphorylation-associated sequence, as a basis for engineering a cardiac-like **NaV1.5** binding region.
+
+**LQHIII**, a disulfide-rich scorpion toxin that targets voltage-gated sodium channels, was selected as the protein engineering target due to its high structural stability and functional activity under physiological conditions (He et al, 2025). The engineered NaV1.5 structure was then used to optimize **LQHIII** variants with **PyRosetta** and simulated annealing to explore changes in predicted protein–protein binding.
+
 ## 🛠️ Methods
 
 This section provides a brief overview of the methods used in this analysis. The workflow consisted of two major phases, described below:
@@ -122,6 +127,12 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 ## 👤 Author
 
 I'm [Jimmy Capecci](https://github.com/jcapecci09), a Bioinformatics graduate student at Loyola University Chicago. I completed this project during my internship at the Stritch School of Medicine in the Peter Kekenes-Huskey Lab, where I explored computational approaches to protein engineering and structural analysis.
+
+## 📚 Sources
+
+He, D., Lei, Y., Qin, H., Cao, Z., & Kwok, H. F. (2025). Deciphering scorpion toxin-induced pain: Molecular mechanisms and ion channel dynamics. *International Journal of Biological Sciences, 21*(7), 2921–2934. [https://doi.org/10.7150/ijbs.109713](https://doi.org/10.7150/ijbs.109713)
+
+Sun, B., Loftus, A., Beh Goh Beh, B., Hepburn, A., Kirk, J. A., & Kekenes-Huskey, P. M. (2025). GSK3β-driven phosphorylation of ABLIM1 regulates its interactions with titin in cardiac muscle. *Journal of General Physiology, 157*(5), e202413737. [https://doi.org/10.1085/jgp.202413737](https://doi.org/10.1085/jgp.202413737)
 
 ## 🙏 Acknowledgements
 
