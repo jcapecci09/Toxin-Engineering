@@ -4,7 +4,7 @@ This project aims to engineer the scorpion toxin LQHIII to bind cardiac proteins
 
 ## ✨ Highlights
 
-This project provides two reusable tools that may be useful for protein engineering and structural analysis:
+This project provides two reusable PyRosetta-based tools for protein engineering and structural analysis:
 
 - `insert_mutation`: Replaces one sequence motif with another motif in a protein structure.
 - `AffinityOptimizer`: Redesigns a protein–protein binding interface to identify mutations that may improve binding affinity.
