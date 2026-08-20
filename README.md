@@ -1,6 +1,8 @@
 # ☣️ Toxin-Engineering
 
-This project aims to engineer the scorpion toxin LQHIII to bind cardiac proteins. The workflow uses the experimentally verified NaV1.5–LQHIII complex as a starting point, modifies NaV1.5 to mimic cardiac proteins, and then engineers LQHIII to bind the resulting cardiac-like complex.
+> This project aims to engineer the scorpion toxin LQHIII to bind cardiac proteins. The workflow uses the experimentally verified NaV1.5–LQHIII complex as a starting point, modifies NaV1.5 to mimic cardiac proteins, and then engineers LQHIII to bind the resulting cardiac-like complex.
+
+---
 
 ## ✨ Highlights
 
@@ -18,6 +20,8 @@ The complete analysis is detailed in `project.ipynb` and consists of the followi
 3. Use `AffinityOptimizer` to engineer LQHIII and generate variants with potentially improved binding affinity for the cardiac-like NaV1.5.
 4. Explore and evaluate the resulting variants.
 
+---
+
 ## 🧬 Overview
 
 Intrinsically disordered regions (IDRs) are flexible regions of proteins that do not adopt a single stable structure, making them difficult to study using traditional structural methods (Sun et al., 2025). Despite this challenge, IDRs play important roles in regulating protein interactions and often contain **phosphorylation sites** that can alter protein function.
@@ -25,6 +29,8 @@ Intrinsically disordered regions (IDRs) are flexible regions of proteins that do
 **ABLIM1**, a cardiac myofilament protein, contains IDRs with phosphorylation sites that may regulate its interactions with other cardiac proteins. This project uses the **ABLIM1 MSSSP motif**, a phosphorylation-associated sequence, as a basis for engineering a cardiac-like **NaV1.5** binding region.
 
 **LQHIII**, a disulfide-rich scorpion toxin that targets voltage-gated sodium channels, was selected as the protein engineering target due to its high structural stability and functional activity under physiological conditions (He et al, 2025). The engineered NaV1.5 structure was then used to optimize **LQHIII** variants with **PyRosetta** and simulated annealing to explore changes in predicted protein–protein binding.
+
+---
 
 ## 🛠️ Methods
 
@@ -78,6 +84,8 @@ opt1 = AffinityOptimizer(
 
 **Note:** A total of 160 variants were generated: 80 using the **Distance Score** and 80 using the **ΔG Score**. Hyperparameters such as `temp`, `cooling_rate`, and `relax` were adjusted between runs to explore different optimization conditions.
 
+---
+
 ## 📊 Results 
 
 ### Runtime
@@ -97,6 +105,8 @@ opt1 = AffinityOptimizer(
 
 ![](Data/figures/top_variants_sequences.png)
 **Figure 4. Sequence Comparison of Top Candidate Variants.** Amino acid sequences of the top candidate variants compared with the relaxed wildtype reference. Gray indicates sequence differences, while red indicates residues involved in important interactions.  
+
+---
 
 ## ⚙️ Usage Instructions
 
@@ -135,6 +145,8 @@ python -m ipykernel install --user --name mol-dyn --display-name "Python (mol-dy
 
 5. Work through `project.ipynb` to produce results
 
+---
+
 ## 🧾 Conclusion
 This project explored how computational protein engineering can be used to redesign the LQHIII scorpion toxin toward a cardiac-like NaV1.5 binding environment. By first modifying NaV1.5 to mimic the ABLIM1 sequence and then using AffinityOptimizer to explore mutations in LQHIII, I was able to generate and compare variants across different optimization conditions.
 
@@ -142,15 +154,21 @@ One of the main takeaways from the results was that optimizing for targeted inte
 
 The variants generated here are computational predictions and still need to be experimentally tested to determine whether they actually improve binding to cardiac proteins. However, this project provides a starting point for using PyRosetta and simulated annealing to explore protein–protein interface engineering and prioritize candidates for future experimental work.
 
+---
+
 ## 👤 Author
 
 I'm [Jimmy Capecci](https://github.com/jcapecci09), a Bioinformatics graduate student at Loyola University Chicago. I completed this project during my internship at the Stritch School of Medicine in the Peter Kekenes-Huskey Lab, where I explored computational approaches to protein engineering and structural analysis.
+
+---
 
 ## 📚 Sources
 
 He, D., Lei, Y., Qin, H., Cao, Z., & Kwok, H. F. (2025). Deciphering scorpion toxin-induced pain: Molecular mechanisms and ion channel dynamics. *International Journal of Biological Sciences, 21*(7), 2921–2934. [https://doi.org/10.7150/ijbs.109713](https://doi.org/10.7150/ijbs.109713)
 
 Sun, B., Loftus, A., Beh Goh Beh, B., Hepburn, A., Kirk, J. A., & Kekenes-Huskey, P. M. (2025). GSK3β-driven phosphorylation of ABLIM1 regulates its interactions with titin in cardiac muscle. *Journal of General Physiology, 157*(5), e202413737. [https://doi.org/10.1085/jgp.202413737](https://doi.org/10.1085/jgp.202413737)
+
+---
 
 ## 🙏 Acknowledgements
 
