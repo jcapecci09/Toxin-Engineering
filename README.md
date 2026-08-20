@@ -1,4 +1,4 @@
-#  Toxin-Engineering
+# ☣️ Toxin-Engineering
 
 This project aims to engineer the scorpion toxin LQHIII to bind cardiac proteins. The workflow uses the experimentally verified NaV1.5–LQHIII complex as a starting point, modifies NaV1.5 to mimic cardiac proteins, and then engineers LQHIII to bind the resulting cardiac-like complex.
 
